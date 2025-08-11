@@ -1,3 +1,168 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MikroGörev - Telefon Uyumlu PWA (Demo)</title>  
+  <style>
+    :root{--accent:#0ea5a4}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; margin:0; background:#f3f4f6; color:#111}
+    header{background:var(--accent); color:white; padding:18px 14px; display:flex; align-items:center; justify-content:space-between}
+    main{padding:14px}
+    .card{background:white;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+    button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;font-weight:600; cursor:pointer;}
+    input, button.select, textarea, select{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;width:100%;box-sizing:border-box}
+    .row{display:flex;gap:8px}
+    .small{font-size:13px;color:#6b7280}
+    .muted{color:#6b7280}
+    .task-actions{display:flex;gap:8px;margin-top:8px}
+    nav a{color:white;text-decoration:none;font-weight:600}
+    footer{padding:12px;text-align:center;color:#6b7280;font-size:13px}
+
+    /* Ödeme Modal */
+    #paymentModal {
+      display:none; 
+      position:fixed; top:0; left:0; width:100%; height:100%; 
+      background:rgba(0,0,0,0.5); 
+      justify-content:center; 
+      align-items:center;
+      z-index:1000;
+    }
+    #paymentModal > div {
+      background:#fff; padding:20px; border-radius:10px; width:90%; max-width:320px; text-align:center;
+    }
+  </style>  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0ea5a4">
+</head>
+<body>
+  <header>
+    <div>
+      <div style="font-size:18px;font-weight:700">📱 MikroGörev</div>
+      <div style="font-size:12px;opacity:0.95">0₺ başlangıç - telefon tarayıcısında çalışır</div>
+    </div>
+    <div id="userArea" style="text-align:right">
+      <div class="muted" id="balance">Bakiye: ₺0</div>
+      <div id="authButtons"></div>
+    </div>
+  </header>  
+  <main>
+    <div id="app">
+      <div id="authCard" class="card">
+        <h3>Giriş / Kayıt</h3>
+        <div class="row" style="margin-top:8px">
+          <input id="email" placeholder="E-posta" />
+        </div>
+        <div style="margin-top:8px">
+          <input id="password" type="password" placeholder="Parola" />
+        </div>
+        <div style="margin-top:8px" class="row">
+          <button id="btnSignUp">Kayıt Ol</button>
+          <button id="btnSignIn" style="background:#4b5563">Giriş Yap</button>
+        </div>
+        <div class="small" style="margin-top:8px">Demo: Gerçek ödeme entegrasyonu için ek adımlar gerekir.</div>
+      </div>
+
+      <div id="taskListCard" class="card" style="display:none">
+        <h3>Mevcut Görevler</h3>
+        <div id="tasks"></div>
+      </div>
+
+      <div id="adminCard" class="card" style="display:none">
+        <h3>Admin: Görev Ekle</h3>
+        <input id="taskTitle" placeholder="Görev başlığı (ör. Instagram beğeni)" />
+        <input id="taskReward" placeholder="Ödül (sadece sayı, ₺)" style="margin-top:8px" />
+        <textarea id="taskDesc" placeholder="Kısa açıklama (isteğe bağlı)" style="margin-top:8px"></textarea>
+        <div style="margin-top:8px" class="row">
+          <button id="btnAddTask">Görev Ekle</button>
+        </div>
+        <div class="small" style="margin-top:8px">Bu panel yalnızca admin e-posta ile görünür. Güvenlik için Firestore kuralları yapılandırılmalıdır.</div>
+      </div>
+    </div>
+  </main>  
+  <footer>
+    Bu bir demo uygulamadır. Ücretli ödemeler manuel onayla yapılır. Hizmet şartları ve veritabanı güvenliği yapılandırılmalıdır.
+  </footer>  
+
+  <!-- Ödeme Modal -->
+  <div id="paymentModal">
+    <div>
+      <h3>Ödeme Yöntemi Seç</h3>
+      <select id="paymentMethod">
+        <option value="">Seçiniz</option>
+        <option value="PayPal">PayPal</option>
+        <option value="Papara">Papara</option>
+        <option value="Banka Havalesi">Banka Havalesi</option>
+      </select>
+      <button id="confirmPaymentBtn" style="margin-top:12px;">Onayla</button>
+      <button id="cancelPaymentBtn" style="margin-left:10px; background:#ef4444;">İptal</button>
+    </div>
+  </div>
+
+  <!-- Firebase & App Script -->
+  <script type="module">
+    // Firebase config - kendi bilgilerinle değiştir!
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2uaLK4sAIAfBGHzN9936pxIyCtYH8qgQ",
+      authDomain: "katsi-afdae.firebaseapp.com",
+      projectId: "katsi-afdae",
+      storageBucket: "katsi-afdae.firebasestorage.app",
+      messagingSenderId: "864000378641",
+      appId: "1:864000378641:web:cfe5ac6e48cf6ee59eaeb0",
+      measurementId: "G-SSHDZGL4P7"
+    };
+
+    // Admin e-posta - değiştir kendine göre
+    const ADMIN_EMAIL = "you@yourdomain.com";
+
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+    import { getFirestore, collection, addDoc, doc, getDocs, query, where, onSnapshot, updateDoc, increment, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // UI elementleri
+    const emailEl = document.getElementById('email');
+    const passwordEl = document.getElementById('password');
+    const btnSignUp = document.getElementById('btnSignUp');
+    const btnSignIn = document.getElementById('btnSignIn');
+    const authButtons = document.getElementById('authButtons');
+    const balanceEl = document.getElementById('balance');
+    const tasksDiv = document.getElementById('tasks');
+    const taskListCard = document.getElementById('taskListCard');
+    const adminCard = document.getElementById('adminCard');
+
+    // Ödeme modal elementleri
+    const paymentModal = document.getElementById('paymentModal');
+    const paymentMethodSelect = document.getElementById('paymentMethod');
+    const confirmPaymentBtn = document.getElementById('confirmPaymentBtn');
+    const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
+
+    let pendingTaskId = null;
+    let pendingReward = 0;
+
+    // Kayıt ol
+    btnSignUp.addEventListener('click', async () => {
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
+      if (!email || !password) { alert('Email ve parola gerekli'); return; }
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'users', userCred.user.uid), { email: email, balance: 0 });
+        alert('Kayıt başarılı!');
+      } catch (e) {
+        console.error(e);
+        alert('Kayıt hatası: ' + e.message);
+      }
+    });
+
+    // Giriş yap
+    btnSignIn.addEventListener('click', async () => {
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
+      if (!email || !password) { alert('Email ve parola gerekli'); return; }
       try {
         await signInWithEmailAndPassword(auth, email, password);
       } catch (e) {
