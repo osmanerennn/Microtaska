@@ -1,33 +1,40 @@
 <!doctype html>
-
-const firebaseConfig = {
-  apiKey: "AIzaSyD2uaLK4sAIAfBGHzN9936pxIyCtYH8qgQ",
-  authDomain: "katsi-afdae.firebaseapp.com",
-  projectId: "katsi-afdae",
-  storageBucket: "katsi-afdae.firebasestorage.app",
-  messagingSenderId: "864000378641",
-  appId: "1:864000378641:web:cfe5ac6e48cf6ee59eaeb0",
-  measurementId: "G-SSHDZGL4P7"
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MikroGörev - Telefon Uyumlu PWA (Demo)</title>  <!-- Simple styling (mobile-first) -->  <style>
+  <title>MikroGörev - Telefon Uyumlu PWA (Demo)</title>  
+  <style>
     :root{--accent:#0ea5a4}
     body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; margin:0; background:#f3f4f6; color:#111}
     header{background:var(--accent); color:white; padding:18px 14px; display:flex; align-items:center; justify-content:space-between}
     main{padding:14px}
     .card{background:white;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
-    button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;font-weight:600}
-    input, button.select, textarea{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;width:100%;box-sizing:border-box}
+    button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;font-weight:600; cursor:pointer;}
+    input, button.select, textarea, select{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;width:100%;box-sizing:border-box}
     .row{display:flex;gap:8px}
     .small{font-size:13px;color:#6b7280}
     .muted{color:#6b7280}
     .task-actions{display:flex;gap:8px;margin-top:8px}
     nav a{color:white;text-decoration:none;font-weight:600}
     footer{padding:12px;text-align:center;color:#6b7280;font-size:13px}
-  </style>  <!-- PWA manifest -->  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0ea5a4"></head>
+
+    /* Ödeme Modal */
+    #paymentModal {
+      display:none; 
+      position:fixed; top:0; left:0; width:100%; height:100%; 
+      background:rgba(0,0,0,0.5); 
+      justify-content:center; 
+      align-items:center;
+      z-index:1000;
+    }
+    #paymentModal > div {
+      background:#fff; padding:20px; border-radius:10px; width:90%; max-width:320px; text-align:center;
+    }
+  </style>  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0ea5a4">
+</head>
 <body>
   <header>
     <div>
@@ -38,7 +45,8 @@ const firebaseConfig = {
       <div class="muted" id="balance">Bakiye: ₺0</div>
       <div id="authButtons"></div>
     </div>
-  </header>  <main>
+  </header>  
+  <main>
     <div id="app">
       <div id="authCard" class="card">
         <h3>Giriş / Kayıt</h3>
@@ -53,50 +61,60 @@ const firebaseConfig = {
           <button id="btnSignIn" style="background:#4b5563">Giriş Yap</button>
         </div>
         <div class="small" style="margin-top:8px">Demo: Gerçek ödeme entegrasyonu için ek adımlar gerekir.</div>
-      </div><div id="taskListCard" class="card" style="display:none">
-    <h3>Mevcut Görevler</h3>
-    <div id="tasks"></div>
-  </div>
+      </div>
 
-  <div id="adminCard" class="card" style="display:none">
-    <h3>Admin: Görev Ekle</h3>
-    <input id="taskTitle" placeholder="Görev başlığı (ör. Instagram beğeni)" />
-    <input id="taskReward" placeholder="Ödül (sadece sayı, ₺)" style="margin-top:8px" />
-    <textarea id="taskDesc" placeholder="Kısa açıklama (isteğe bağlı)" style="margin-top:8px"></textarea>
-    <div style="margin-top:8px" class="row">
-      <button id="btnAddTask">Görev Ekle</button>
+      <div id="taskListCard" class="card" style="display:none">
+        <h3>Mevcut Görevler</h3>
+        <div id="tasks"></div>
+      </div>
+
+      <div id="adminCard" class="card" style="display:none">
+        <h3>Admin: Görev Ekle</h3>
+        <input id="taskTitle" placeholder="Görev başlığı (ör. Instagram beğeni)" />
+        <input id="taskReward" placeholder="Ödül (sadece sayı, ₺)" style="margin-top:8px" />
+        <textarea id="taskDesc" placeholder="Kısa açıklama (isteğe bağlı)" style="margin-top:8px"></textarea>
+        <div style="margin-top:8px" class="row">
+          <button id="btnAddTask">Görev Ekle</button>
+        </div>
+        <div class="small" style="margin-top:8px">Bu panel yalnızca admin e-posta ile görünür. Güvenlik için Firestore kuralları yapılandırılmalıdır.</div>
+      </div>
     </div>
-    <div class="small" style="margin-top:8px">Bu panel yalnızca admin e-posta ile görünür. Güvenlik için Firestore kuralları yapılandırılmalıdır.</div>
+  </main>  
+  <footer>
+    Bu bir demo uygulamadır. Ücretli ödemeler manuel onayla yapılır. Hizmet şartları ve veritabanı güvenliği yapılandırılmalıdır.
+  </footer>  
+
+  <!-- Ödeme Modal -->
+  <div id="paymentModal">
+    <div>
+      <h3>Ödeme Yöntemi Seç</h3>
+      <select id="paymentMethod">
+        <option value="">Seçiniz</option>
+        <option value="PayPal">PayPal</option>
+        <option value="Papara">Papara</option>
+        <option value="Banka Havalesi">Banka Havalesi</option>
+      </select>
+      <button id="confirmPaymentBtn" style="margin-top:12px;">Onayla</button>
+      <button id="cancelPaymentBtn" style="margin-left:10px; background:#ef4444;">İptal</button>
+    </div>
   </div>
 
-</div>
-
-  </main>  <footer>
-    Bu bir demo uygulamadır. Ücretli ödemeler manuel onayla yapılır. Hizmet şartları ve veritabanı güvenliği yapılandırılmalıdır.
-  </footer>  <!-- Firebase (Modular SDK) - Replace the version if needed -->  <script type="module">
-    // ------------- KULLANICI YAPMAN GEREKENLER -------------
-    // 1) https://console.firebase.google.com/ üzerinden yeni bir proje oluştur.
-    // 2) Authentication -> Email/Password'ı etkinleştir.
-    // 3) Firestore Database oluştur (kurallar: sadece doğrulanmış kullanıcı okuma/yazma, admin kontrolü için özel alan).
-    // 4) Aşağıdaki firebaseConfig kısmına kendi config'ini yapıştır.
-    // 5) (Opsiyonel) Hosting: GitHub Pages / Netlify / Firebase Hosting ile dağıt.
-    // 6) Gerçek para transferleri için PayPal / Papara / banka entegrasyonu ve KYC gereklidir.
-
-    // ---------- Buraya kendi Firebase config'ini yapıştır ----------
+  <!-- Firebase & App Script -->
+  <script type="module">
+    // Firebase config - kendi bilgilerinle değiştir!
     const firebaseConfig = {
-      apiKey: "REPLACE_WITH_YOUR_API_KEY",
-      authDomain: "REPLACE_WITH_YOUR_AUTH_DOMAIN",
-      projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
-      storageBucket: "REPLACE_WITH_YOUR_STORAGE_BUCKET",
-      messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
-      appId: "REPLACE_WITH_YOUR_APP_ID"
-      // optionally measurementId
+      apiKey: "AIzaSyD2uaLK4sAIAfBGHzN9936pxIyCtYH8qgQ",
+      authDomain: "katsi-afdae.firebaseapp.com",
+      projectId: "katsi-afdae",
+      storageBucket: "katsi-afdae.firebasestorage.app",
+      messagingSenderId: "864000378641",
+      appId: "1:864000378641:web:cfe5ac6e48cf6ee59eaeb0",
+      measurementId: "G-SSHDZGL4P7"
     };
 
-    // Admin e-posta: bu e-posta ile giriş yapan kişi admin paneli görür
-    const ADMIN_EMAIL = "you@yourdomain.com"; // değiştir
+    // Admin e-posta - değiştir kendine göre
+    const ADMIN_EMAIL = "you@yourdomain.com";
 
-    // ----------------- Firebase import (modular) -----------------
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
     import { getFirestore, collection, addDoc, doc, getDocs, query, where, onSnapshot, updateDoc, increment, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
@@ -105,7 +123,7 @@ const firebaseConfig = {
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // UI elemanları
+    // UI elementleri
     const emailEl = document.getElementById('email');
     const passwordEl = document.getElementById('password');
     const btnSignUp = document.getElementById('btnSignUp');
@@ -116,42 +134,56 @@ const firebaseConfig = {
     const taskListCard = document.getElementById('taskListCard');
     const adminCard = document.getElementById('adminCard');
 
-    // Kayıt
-    btnSignUp.addEventListener('click', async ()=>{
+    // Ödeme modal elementleri
+    const paymentModal = document.getElementById('paymentModal');
+    const paymentMethodSelect = document.getElementById('paymentMethod');
+    const confirmPaymentBtn = document.getElementById('confirmPaymentBtn');
+    const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
+
+    let pendingTaskId = null;
+    let pendingReward = 0;
+
+    // Kayıt ol
+    btnSignUp.addEventListener('click', async () => {
       const email = emailEl.value.trim();
       const password = passwordEl.value;
-      if(!email || !password){ alert('Email ve parola gerekli'); return; }
-      try{
+      if (!email || !password) { alert('Email ve parola gerekli'); return; }
+      try {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        // kullanıcı doc oluştur (bakiye 0)
-        await setDoc(doc(db, 'users', userCred.user.uid), {email: email, balance: 0});
+        await setDoc(doc(db, 'users', userCred.user.uid), { email: email, balance: 0 });
         alert('Kayıt başarılı!');
-      }catch(e){ console.error(e); alert('Kayıt hatası: '+e.message); }
+      } catch (e) {
+        console.error(e);
+        alert('Kayıt hatası: ' + e.message);
+      }
     });
 
-    // Giriş
-    btnSignIn.addEventListener('click', async ()=>{
+    // Giriş yap
+    btnSignIn.addEventListener('click', async () => {
       const email = emailEl.value.trim();
       const password = passwordEl.value;
-      if(!email || !password){ alert('Email ve parola gerekli'); return; }
-      try{ await signInWithEmailAndPassword(auth, email, password); }
-      catch(e){ console.error(e); alert('Giriş hatası: '+e.message); }
+      if (!email || !password) { alert('Email ve parola gerekli'); return; }
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (e) {
+        console.error(e);
+        alert('Giriş hatası: ' + e.message);
+      }
     });
 
-    // Oturum değişikliği
-    onAuthStateChanged(auth, async (user)=>{
-      if(user){
-        // kullanıcı info
+    // Oturum durumunu izle
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
         authButtons.innerHTML = `<div style="font-size:13px">${user.email} <button id=btnLogout style="margin-left:8px;background:#ef4444">Çıkış</button></div>`;
-        document.getElementById('btnLogout').onclick = ()=> signOut(auth);
-        // kullanıcı dokümanını al
+        document.getElementById('btnLogout').onclick = () => signOut(auth);
+
         const udoc = await getDoc(doc(db, 'users', user.uid));
         const ubal = udoc.exists() ? udoc.data().balance || 0 : 0;
         balanceEl.textContent = `Bakiye: ₺${ubal}`;
         taskListCard.style.display = 'block';
-        // admin görünürlüğü
-        if(user.email === ADMIN_EMAIL) adminCard.style.display = 'block'; else adminCard.style.display = 'none';
-        // görevleri dinle
+
+        if (user.email === ADMIN_EMAIL) adminCard.style.display = 'block'; else adminCard.style.display = 'none';
+
         startTasksListener();
       } else {
         authButtons.innerHTML = '';
@@ -161,73 +193,110 @@ const firebaseConfig = {
       }
     });
 
-    // Görevleri dinle (basit: tüm görevleri sırala)
+    // Görevleri dinle
     let unsubscribeTasks = null;
-    function startTasksListener(){
-      if(unsubscribeTasks) unsubscribeTasks();
+    function startTasksListener() {
+      if (unsubscribeTasks) unsubscribeTasks();
       const tasksCol = collection(db, 'tasks');
-      // Not: production için sorgu / sayfalama ekleyin
-      unsubscribeTasks = onSnapshot(tasksCol, (snap)=>{
+      unsubscribeTasks = onSnapshot(tasksCol, (snap) => {
         tasksDiv.innerHTML = '';
-        snap.forEach(docSnap=>{
-          const t = {id: docSnap.id, ...docSnap.data()};
+        snap.forEach(docSnap => {
+          const t = { id: docSnap.id, ...docSnap.data() };
           renderTask(t);
         });
       });
     }
 
-    // Görev render
-    function renderTask(task){
+    // Görev gösterimi
+    function renderTask(task) {
       const el = document.createElement('div');
       el.className = 'card';
-      el.innerHTML = `<div><strong>${escapeHtml(task.title)}</strong></div><div class="small muted">${escapeHtml(task.description||'')}</div><div style="margin-top:8px">Ödül: ₺${task.reward}</div>`;
+      el.innerHTML = `<div><strong>${escapeHtml(task.title)}</strong></div><div class="small muted">${escapeHtml(task.description || '')}</div><div style="margin-top:8px">Ödül: ₺${task.reward}</div>`;
 
       const actions = document.createElement('div'); actions.className = 'task-actions';
       const btn = document.createElement('button'); btn.textContent = 'Tamamla';
-      btn.onclick = ()=> completeTask(task.id, task.reward);
-      actions.appendChild(btn);
 
+      btn.onclick = () => {
+        showPaymentModal(task.id, task.reward);
+      };
+
+      actions.appendChild(btn);
       el.appendChild(actions);
       tasksDiv.appendChild(el);
     }
 
-    // Görevi tamamla: kullanıcı daha önce tamamlamış mı kontrolü -> tamamla -> bakiye güncelle
-    async function completeTask(taskId, reward){
+    // Görev tamamlama (ödeme yöntemi ile)
+    async function completeTaskWithPayment(taskId, reward, paymentMethod) {
       const user = auth.currentUser;
-      if(!user){ alert('Lütfen giriş yapın'); return; }
-      try{
-        // completions collection: users/{uid}/completions/{taskId}
+      if (!user) { alert('Lütfen giriş yapın'); return; }
+      try {
         const compRef = doc(db, 'users', user.uid, 'completions', taskId);
         const compSnap = await getDoc(compRef);
-        if(compSnap.exists()){ alert('Bu görevi zaten tamamladınız.'); return; }
-        // işaretle
-        await setDoc(compRef, {taskId: taskId, completedAt: new Date().toISOString(), reward: Number(reward)});
-        // bakiye ekle (transaction değil; küçük demo)
+        if (compSnap.exists()) { alert('Bu görevi zaten tamamladınız.'); return; }
+
+        await setDoc(compRef, { taskId, completedAt: new Date().toISOString(), reward: Number(reward), paymentMethod });
+
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, { balance: increment(Number(reward)) });
-        // güncel bakiye al ve göster
+
         const newUserSnap = await getDoc(userRef);
         const newBal = newUserSnap.data().balance;
         balanceEl.textContent = `Bakiye: ₺${newBal}`;
-        alert('Tebrikler! Görev tamamlandı ve bakiye eklendi.');
-      }catch(e){ console.error(e); alert('Tamamlama hatası: '+e.message); }
+        alert(`Tebrikler! Görev tamamlandı ve bakiye eklendi.\nÖdeme Yöntemi: ${paymentMethod}`);
+      } catch (e) {
+        console.error(e);
+        alert('Tamamlama hatası: ' + e.message);
+      }
     }
 
-    // Admin: görev ekle
-    document.getElementById('btnAddTask').addEventListener('click', async ()=>{
+    // Ödeme modal fonksiyonları
+    function showPaymentModal(taskId, reward) {
+      pendingTaskId = taskId;
+      pendingReward = reward;
+      paymentMethodSelect.value = "";
+      paymentModal.style.display = "flex";
+    }
+
+    confirmPaymentBtn.onclick = async () => {
+      const method = paymentMethodSelect.value;
+      if (!method) {
+        alert("Lütfen bir ödeme yöntemi seçin.");
+        return;
+      }
+      paymentModal.style.display = "none";
+
+      await completeTaskWithPayment(pendingTaskId, pendingReward, method);
+      pendingTaskId = null;
+      pendingReward = 0;
+    };
+
+    cancelPaymentBtn.onclick = () => {
+      paymentModal.style.display = "none";
+      pendingTaskId = null;
+      pendingReward = 0;
+    };
+
+    // Admin: Görev ekleme
+    document.getElementById('btnAddTask').addEventListener('click', async () => {
       const title = document.getElementById('taskTitle').value.trim();
       const desc = document.getElementById('taskDesc').value.trim();
       const reward = Number(document.getElementById('taskReward').value);
-      if(!title || !reward){ alert('Başlık ve ödül gerekli'); return; }
-      try{
-        await addDoc(collection(db, 'tasks'), {title:title, description:desc, reward: reward, createdAt: new Date().toISOString()});
-        document.getElementById('taskTitle').value=''; document.getElementById('taskDesc').value=''; document.getElementById('taskReward').value='';
+      if (!title || !reward) { alert('Başlık ve ödül gerekli'); return; }
+      try {
+        await addDoc(collection(db, 'tasks'), { title: title, description: desc, reward: reward, createdAt: new Date().toISOString() });
+        document.getElementById('taskTitle').value = ''; document.getElementById('taskDesc').value = ''; document.getElementById('taskReward').value = '';
         alert('Görev eklendi');
-      }catch(e){ console.error(e); alert('Ekleme hatası: '+e.message); }
+      } catch (e) {
+        console.error(e);
+        alert('Ekleme hatası: ' + e.message);
+      }
     });
 
-    // Güvenlik: kullanıcı girdilerini temizle (basit)
-    function escapeHtml(text){ if(!text) return ''; return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  </script></body>
+    // Basit HTML kaçış fonksiyonu
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
 </html>
