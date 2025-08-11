@@ -3,35 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MikroGörev - Telefon Uyumlu PWA (Demo)</title>  
+  <title>MikroGörev - Telefon Uyumlu PWA (Demo)</title>
   <style>
     :root{--accent:#0ea5a4}
     body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; margin:0; background:#f3f4f6; color:#111}
     header{background:var(--accent); color:white; padding:18px 14px; display:flex; align-items:center; justify-content:space-between}
     main{padding:14px}
     .card{background:white;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
-    button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;font-weight:600; cursor:pointer;}
-    input, button.select, textarea, select{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;width:100%;box-sizing:border-box}
+    button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;font-weight:600;cursor:pointer;}
+    input, button.select, textarea{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;width:100%;box-sizing:border-box}
     .row{display:flex;gap:8px}
     .small{font-size:13px;color:#6b7280}
     .muted{color:#6b7280}
     .task-actions{display:flex;gap:8px;margin-top:8px}
     nav a{color:white;text-decoration:none;font-weight:600}
     footer{padding:12px;text-align:center;color:#6b7280;font-size:13px}
-
-    /* Ödeme Modal */
-    #paymentModal {
-      display:none; 
-      position:fixed; top:0; left:0; width:100%; height:100%; 
-      background:rgba(0,0,0,0.5); 
-      justify-content:center; 
-      align-items:center;
-      z-index:1000;
-    }
-    #paymentModal > div {
-      background:#fff; padding:20px; border-radius:10px; width:90%; max-width:320px; text-align:center;
-    }
-  </style>  
+  </style>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0ea5a4">
 </head>
@@ -45,7 +32,8 @@
       <div class="muted" id="balance">Bakiye: ₺0</div>
       <div id="authButtons"></div>
     </div>
-  </header>  
+  </header>
+
   <main>
     <div id="app">
       <div id="authCard" class="card">
@@ -79,51 +67,38 @@
         <div class="small" style="margin-top:8px">Bu panel yalnızca admin e-posta ile görünür. Güvenlik için Firestore kuralları yapılandırılmalıdır.</div>
       </div>
     </div>
-  </main>  
+  </main>
+
   <footer>
     Bu bir demo uygulamadır. Ücretli ödemeler manuel onayla yapılır. Hizmet şartları ve veritabanı güvenliği yapılandırılmalıdır.
-  </footer>  
+  </footer>
 
-  <!-- Ödeme Modal -->
-  <div id="paymentModal">
-    <div>
-      <h3>Ödeme Yöntemi Seç</h3>
-      <select id="paymentMethod">
-        <option value="">Seçiniz</option>
-        <option value="PayPal">PayPal</option>
-        <option value="Papara">Papara</option>
-        <option value="Banka Havalesi">Banka Havalesi</option>
-      </select>
-      <button id="confirmPaymentBtn" style="margin-top:12px;">Onayla</button>
-      <button id="cancelPaymentBtn" style="margin-left:10px; background:#ef4444;">İptal</button>
-    </div>
-  </div>
-
-  <!-- Firebase & App Script -->
+  <!-- Firebase ve Uygulama Kodları -->
   <script type="module">
-    // Firebase config - kendi bilgilerinle değiştir!
+    // Firebase config - kendi değerlerinle değiştir
     const firebaseConfig = {
       apiKey: "AIzaSyD2uaLK4sAIAfBGHzN9936pxIyCtYH8qgQ",
       authDomain: "katsi-afdae.firebaseapp.com",
       projectId: "katsi-afdae",
-      storageBucket: "katsi-afdae.firebasestorage.app",
+      storageBucket: "katsi-afdae.appspot.com",
       messagingSenderId: "864000378641",
       appId: "1:864000378641:web:cfe5ac6e48cf6ee59eaeb0",
       measurementId: "G-SSHDZGL4P7"
     };
 
-    // Admin e-posta - değiştir kendine göre
-    const ADMIN_EMAIL = "you@yourdomain.com";
+    const ADMIN_EMAIL = "admin@example.com"; // Buraya admin e-postanı yaz
 
+    // Firebase SDK importları
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
-    import { getFirestore, collection, addDoc, doc, getDocs, query, where, onSnapshot, updateDoc, increment, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
+    import { getFirestore, collection, addDoc, doc, getDoc, onSnapshot, updateDoc, increment, setDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
 
+    // Firebase başlat
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // UI elementleri
+    // UI elemanları
     const emailEl = document.getElementById('email');
     const passwordEl = document.getElementById('password');
     const btnSignUp = document.getElementById('btnSignUp');
@@ -134,15 +109,6 @@
     const taskListCard = document.getElementById('taskListCard');
     const adminCard = document.getElementById('adminCard');
 
-    // Ödeme modal elementleri
-    const paymentModal = document.getElementById('paymentModal');
-    const paymentMethodSelect = document.getElementById('paymentMethod');
-    const confirmPaymentBtn = document.getElementById('confirmPaymentBtn');
-    const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
-
-    let pendingTaskId = null;
-    let pendingReward = 0;
-
     // Kayıt ol
     btnSignUp.addEventListener('click', async () => {
       const email = emailEl.value.trim();
@@ -152,10 +118,7 @@
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, 'users', userCred.user.uid), { email: email, balance: 0 });
         alert('Kayıt başarılı!');
-      } catch (e) {
-        console.error(e);
-        alert('Kayıt hatası: ' + e.message);
-      }
+      } catch (e) { console.error(e); alert('Kayıt hatası: ' + e.message); }
     });
 
     // Giriş yap
@@ -165,24 +128,24 @@
       if (!email || !password) { alert('Email ve parola gerekli'); return; }
       try {
         await signInWithEmailAndPassword(auth, email, password);
-      } catch (e) {
-        console.error(e);
-        alert('Giriş hatası: ' + e.message);
-      }
+      } catch (e) { console.error(e); alert('Giriş hatası: ' + e.message); }
     });
 
-    // Oturum durumunu izle
+    // Oturum durumunu dinle
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        authButtons.innerHTML = `<div style="font-size:13px">${user.email} <button id=btnLogout style="margin-left:8px;background:#ef4444">Çıkış</button></div>`;
+        authButtons.innerHTML = `<div style="font-size:13px">${user.email} <button id="btnLogout" style="margin-left:8px;background:#ef4444;cursor:pointer;">Çıkış</button></div>`;
         document.getElementById('btnLogout').onclick = () => signOut(auth);
 
+        // Kullanıcı bilgisi al
         const udoc = await getDoc(doc(db, 'users', user.uid));
         const ubal = udoc.exists() ? udoc.data().balance || 0 : 0;
         balanceEl.textContent = `Bakiye: ₺${ubal}`;
+
         taskListCard.style.display = 'block';
 
-        if (user.email === ADMIN_EMAIL) adminCard.style.display = 'block'; else adminCard.style.display = 'none';
+        if (user.email === ADMIN_EMAIL) adminCard.style.display = 'block';
+        else adminCard.style.display = 'none';
 
         startTasksListener();
       } else {
@@ -190,6 +153,7 @@
         balanceEl.textContent = 'Bakiye: ₺0';
         taskListCard.style.display = 'none';
         adminCard.style.display = 'none';
+        tasksDiv.innerHTML = '';
       }
     });
 
@@ -207,26 +171,28 @@
       });
     }
 
-    // Görev gösterimi
+    // Görevleri göster
     function renderTask(task) {
       const el = document.createElement('div');
       el.className = 'card';
-      el.innerHTML = `<div><strong>${escapeHtml(task.title)}</strong></div><div class="small muted">${escapeHtml(task.description || '')}</div><div style="margin-top:8px">Ödül: ₺${task.reward}</div>`;
+      el.innerHTML = `
+        <div><strong>${escapeHtml(task.title)}</strong></div>
+        <div class="small muted">${escapeHtml(task.description || '')}</div>
+        <div style="margin-top:8px">Ödül: ₺${task.reward}</div>`;
 
-      const actions = document.createElement('div'); actions.className = 'task-actions';
-      const btn = document.createElement('button'); btn.textContent = 'Tamamla';
-
-      btn.onclick = () => {
-        showPaymentModal(task.id, task.reward);
-      };
-
+      const actions = document.createElement('div');
+      actions.className = 'task-actions';
+      const btn = document.createElement('button');
+      btn.textContent = 'Tamamla';
+      btn.onclick = () => completeTask(task.id, task.reward);
       actions.appendChild(btn);
       el.appendChild(actions);
+
       tasksDiv.appendChild(el);
     }
 
-    // Görev tamamlama (ödeme yöntemi ile)
-    async function completeTaskWithPayment(taskId, reward, paymentMethod) {
+    // Görev tamamla ve bakiye güncelle (basit ödeme yöntemi olarak)
+    async function completeTask(taskId, reward) {
       const user = auth.currentUser;
       if (!user) { alert('Lütfen giriş yapın'); return; }
       try {
@@ -234,7 +200,7 @@
         const compSnap = await getDoc(compRef);
         if (compSnap.exists()) { alert('Bu görevi zaten tamamladınız.'); return; }
 
-        await setDoc(compRef, { taskId, completedAt: new Date().toISOString(), reward: Number(reward), paymentMethod });
+        await setDoc(compRef, { taskId: taskId, completedAt: new Date().toISOString(), reward: Number(reward) });
 
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, { balance: increment(Number(reward)) });
@@ -242,41 +208,15 @@
         const newUserSnap = await getDoc(userRef);
         const newBal = newUserSnap.data().balance;
         balanceEl.textContent = `Bakiye: ₺${newBal}`;
-        alert(`Tebrikler! Görev tamamlandı ve bakiye eklendi.\nÖdeme Yöntemi: ${paymentMethod}`);
+
+        alert('Tebrikler! Görev tamamlandı ve bakiye eklendi.');
       } catch (e) {
         console.error(e);
         alert('Tamamlama hatası: ' + e.message);
       }
     }
 
-    // Ödeme modal fonksiyonları
-    function showPaymentModal(taskId, reward) {
-      pendingTaskId = taskId;
-      pendingReward = reward;
-      paymentMethodSelect.value = "";
-      paymentModal.style.display = "flex";
-    }
-
-    confirmPaymentBtn.onclick = async () => {
-      const method = paymentMethodSelect.value;
-      if (!method) {
-        alert("Lütfen bir ödeme yöntemi seçin.");
-        return;
-      }
-      paymentModal.style.display = "none";
-
-      await completeTaskWithPayment(pendingTaskId, pendingReward, method);
-      pendingTaskId = null;
-      pendingReward = 0;
-    };
-
-    cancelPaymentBtn.onclick = () => {
-      paymentModal.style.display = "none";
-      pendingTaskId = null;
-      pendingReward = 0;
-    };
-
-    // Admin: Görev ekleme
+    // Admin: görev ekle
     document.getElementById('btnAddTask').addEventListener('click', async () => {
       const title = document.getElementById('taskTitle').value.trim();
       const desc = document.getElementById('taskDesc').value.trim();
@@ -284,7 +224,9 @@
       if (!title || !reward) { alert('Başlık ve ödül gerekli'); return; }
       try {
         await addDoc(collection(db, 'tasks'), { title: title, description: desc, reward: reward, createdAt: new Date().toISOString() });
-        document.getElementById('taskTitle').value = ''; document.getElementById('taskDesc').value = ''; document.getElementById('taskReward').value = '';
+        document.getElementById('taskTitle').value = '';
+        document.getElementById('taskDesc').value = '';
+        document.getElementById('taskReward').value = '';
         alert('Görev eklendi');
       } catch (e) {
         console.error(e);
@@ -292,7 +234,7 @@
       }
     });
 
-    // Basit HTML kaçış fonksiyonu
+    // Basit HTML escape fonksiyonu
     function escapeHtml(text) {
       if (!text) return '';
       return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
